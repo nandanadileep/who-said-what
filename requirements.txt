@@ -1,0 +1,18 @@
+# Core data handling
+pandas
+numpy
+
+# LangChain (retrieval utilities only)
+langchain
+langchain-community
+langchain_huggingface
+
+# Embeddings (local, no API calls)
+sentence-transformers
+
+# Vector search
+faiss-cpu
+
+# Utilities
+scikit-learn
+tqdm
