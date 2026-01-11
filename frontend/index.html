@@ -307,7 +307,6 @@
             font-size: 13px;
             cursor: pointer;
             transition: color 0.2s;
-            group-hover: 
         }
         .action-icon {
             width: 18px; height: 18px;
@@ -400,6 +399,36 @@
             display: none;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* --- TYPING INDICATOR --- */
+        .typing-container {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--text-secondary);
+            border-radius: 50%;
+            margin: 0 3px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Specific style for the loading tweet to look 'ghostly' */
+        .tweet.loading-state {
+            border-bottom: none;
+            opacity: 0.8;
+        }
 
     </style>
 </head>
@@ -414,7 +443,7 @@
             
             <nav class="nav-links">
                 <a href="#" class="nav-item active">
-                    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M22 23h-6.001a1 1 0 0 1-1-1v-5.455a2.997 2.997 0 1 0-5.998 0V22a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V11.543a1.002 1.002 0 0 1 .31-.724l10-9.543a1.001 1.001 0 0 1 1.38 0l10 9.543a1.002 1.002 0 0 1 .31.724V22a1 1 0 0 1-1 1Z"></path></svg>
+                    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M22 23h-6.001a1 1 0 0 1-1-1v-5.455a2.997 2.997 0 1 0-5.998 0V22a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V11.543a1.002 1.002 0 0 1 .31.724l10-9.543a1.001 1.001 0 0 1 1.38 0l10 9.543a1.002 1.002 0 0 1 .31.724V22a1 1 0 0 1-1 1Z"></path></svg>
                     <span class="nav-label">Home</span>
                 </a>
                 <a href="#" class="nav-item">
@@ -482,7 +511,7 @@
 
         <div id="feed-stream">
             <article class="tweet">
-                <img src="https://bigbangtheory.fandom.com/wiki/Special:FilePath/Sheldon_Cooper.jpg" class="user-avatar" style="background-color: #555;" onerror="this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'">
+                <img src="assets/remote/sheldon_03090030.jpg" class="user-avatar" style="background-color: #555;" onerror="this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'">
                 <div class="tweet-content">
                     <div class="tweet-header">
                         <span class="user-name">Sheldon Cooper</span>
@@ -529,7 +558,7 @@
         <div class="widget">
             <div class="widget-header">Who to follow</div>
             <div class="follow-item">
-                <img src="https://bigbangtheory.fandom.com/wiki/Special:FilePath/Penny.jpg" class="follow-avatar" onerror="this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'">
+                <img src="assets/remote/penny_01c8fefd.jpg" class="follow-avatar" onerror="this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'">
                 <div class="follow-info">
                     <div style="font-weight: 700;">Penny</div>
                     <div style="color: var(--text-secondary); font-size: 13px;">@penny_hofstadter</div>
@@ -537,7 +566,7 @@
                 <button class="follow-btn">Follow</button>
             </div>
             <div class="follow-item">
-                <img src="https://bigbangtheory.fandom.com/wiki/Special:FilePath/Leonard_Hofstadter.jpg" class="follow-avatar" onerror="this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'">
+                <img src="assets/remote/leonard_01372120.jpg" class="follow-avatar" onerror="this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'">
                 <div class="follow-info">
                     <div style="font-weight: 700;">Leonard</div>
                     <div style="color: var(--text-secondary); font-size: 13px;">@leonard_h</div>
@@ -577,13 +606,13 @@
         const text = composeInput.value.trim();
         if (!text) return;
 
-        // UI Updates: Disable input, show spinner
+        // 1. UI Updates: Disable input, show spinner in button
         isProcessing = true;
         postBtn.classList.remove('active');
         composeInput.disabled = true;
         spinner.style.display = 'block';
 
-        // 1. Render User's Post Immediately
+        // 2. Render User's Post Immediately
         const userTweetId = Date.now();
         renderTweet(text, 'User', '@user', 'Just now', 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png', false, userTweetId);
 
@@ -591,7 +620,10 @@
         composeInput.value = '';
         composeInput.style.height = 'auto';
 
-        // 2. Call Backend API
+        // 3. SHOW TYPING INDICATOR IN FEED
+        const loadingElement = showTypingIndicator();
+
+        // 4. Call Backend API (Simulated)
         try {
             const response = await fetch('/api/predict', {
                 method: 'POST',
@@ -602,28 +634,31 @@
             if (!response.ok) throw new Error('API Error');
             const data = await response.json();
 
-            // 3. Render Character Reply
+            // Process Character Data
             const charName = data.prediction || 'Unknown';
-            // Logic: prefer local_image if valid, else image_url, else fallback
-            let charImg = data.local_image;
-            if (!charImg && data.image) charImg = data.image;
-            if (!charImg) charImg = `assets/${charName.toLowerCase().replace(/[^a-z0-9]/g, '_')}.svg`; // Fallback from original logic
+            let charImg = data.local_image || data.image;
+            if (!charImg) charImg = `assets/${charName.toLowerCase().replace(/[^a-z0-9]/g, '_')}.svg`; 
 
             const replyText = getCharacterReply(charName);
             
-            // Add a small delay for "realism"
+            // Artificial delay to let the user see the "typing" animation
             setTimeout(() => {
+                // REMOVE TYPING INDICATOR
+                if(loadingElement) loadingElement.remove();
+
+                // Add Real Reply
                 renderTweet(replyText, charName, `@${charName.replace(' ', '_').toLowerCase()}`, '1s', charImg, true, null, userTweetId);
                 finishPost();
-            }, 800);
+            }, 1500); // Increased delay slightly for effect
 
         } catch (error) {
             console.error(error);
-            // Fallback for demo if API fails
+            // Fallback for demo
             setTimeout(() => {
+                if(loadingElement) loadingElement.remove(); // Remove indicator
                 renderTweet("I couldn't reach the server, but that sounded like Sheldon.", "System", "@server_bot", "1s", "", true, null, userTweetId);
                 finishPost();
-            }, 500);
+            }, 1000);
         }
     });
 
@@ -632,6 +667,31 @@
         spinner.style.display = 'none';
         composeInput.disabled = false;
         composeInput.focus();
+    }
+
+    // --- NEW FUNCTION: RENDER TYPING INDICATOR ---
+    function showTypingIndicator() {
+        const article = document.createElement('article');
+        article.className = 'tweet loading-state';
+        
+        // We use a generic "system" avatar or transparent one for the loading state
+        article.innerHTML = `
+            <div class="user-avatar" style="background: transparent;"></div>
+            <div class="tweet-content">
+                <div class="tweet-header">
+                    <span class="user-name" style="color: var(--text-secondary);">Identifying character</span>
+                </div>
+                <div class="typing-container">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+        `;
+        
+        // Insert at the top of the feed (before the user's post moves down, or right after it)
+        feedStream.insertBefore(article, feedStream.firstChild);
+        return article; // Return element so we can remove it later
     }
 
     // --- RENDER TWEET FUNCTION ---
@@ -643,9 +703,6 @@
         // Handle missing images gracefully
         const safeAvatar = avatarUrl || 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
 
-        // If it's a reply, we can visually connect it (optional, simplifed here)
-        // Note: In a real React app we'd link these via ID. Here we just prepend to feed.
-        
         const html = `
             ${!isReply && id ? `<div class="thread-line" id="line-${id}"></div>` : ''}
             <img src="${safeAvatar}" class="user-avatar" onerror="this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'">
@@ -668,8 +725,6 @@
 
         // Insert logic: Newest at top
         if (replyToId) {
-            // Find the original tweet and insert after it
-            // Simple approach for this demo: just insert at top (Twitter style is chronological)
             feedStream.insertBefore(article, feedStream.firstChild);
         } else {
             feedStream.insertBefore(article, feedStream.firstChild);
@@ -693,15 +748,78 @@
 
     // --- RANDOM REPLIES ---
     function getCharacterReply(name) {
-        const catchphrases = [
-            "That is my dialogue! Bazinga!",
-            "I believe I said that.",
-            "That sounds exactly like something I would say.",
-            "Correct. That was me.",
-            "Are you mocking me? Because that is my line.",
-            "Oh look, someone is quoting me."
+        // Normalize name to lowercase for easier matching
+        const cleanName = name.toLowerCase();
+
+        const replies = {
+            sheldon: [
+                "Bazinga! I fooled you.",
+                "That is my spot. And that is my line.",
+                "I'm not crazy, my mother had me tested.",
+                "Please, I have a master's degree and two doctorates. Of course I said that.",
+                "In the world of minions, I am the Gru. That is my dialogue.",
+                "It's a non-optional social convention that you credit me for that quote.",
+                "Oh, gravity, thou art a heartless bitch. (Also, I said that)."
+            ],
+            leonard: [
+                "Yeah, yeah, I said it. Can we go now?",
+                "Why does everything always have to be about Sheldon?",
+                "I did say that. And I regret it immediately.",
+                "That sounds like something I'd say while Penny is ignoring me.",
+                "Sarcasm sign? No? Okay, yes, that was me.",
+                "I put up with a lot, but yes, that is my line."
+            ],
+            penny: [
+                "Holy crap on a cracker, I actually said that?",
+                "I need a glass of wine to deal with this.",
+                "Yeah, I said it. Don't look at me like I'm stupid.",
+                "Is that a science thing? Because I definitely said it.",
+                "Knock, knock, knock. Penny. That's me.",
+                "Sweetie, I say a lot of things."
+            ],
+            howard: [
+                "I went to space! Of course I said something that cool.",
+                "That's the engineer talking. MIT, baby!",
+                "Did my mother tell you that? BECAUSE I AM AN ASTRONAUT.",
+                "That line works on all the ladies. Trust me.",
+                "I believe the term you are looking for is 'Wolowitzed'.",
+                "Bernadette would kill me if she knew I repeated that."
+            ],
+            raj: [
+                "(Whispers in ear) *He says he definitely said that.*",
+                "I'm comfortable with my masculinity, and I stand by that quote.",
+                "That was beautiful. Like a Bollywood movie.",
+                "My father paid a lot of money for me to say that.",
+                "Did you know I have a dog named Cinnamon? Also, yes, I said that.",
+                "Please don't send me back to India, I am being witty!"
+            ],
+            amy: [
+                "According to my research, that is indeed my utterance.",
+                "I find your obsession with my quotes... titillating.",
+                "Sheldon, look! They are quoting me!",
+                "That is scientifically accurate and socially awkward. Definitely me.",
+                "My hippocampus retains the memory of saying exactly that."
+            ]
+        };
+
+        // Generic fallback for unknown characters
+        const generic = [
+            "I believe that was my line.",
+            "Yes, I recall saying that.",
+            "That sounds exactly like me.",
+            "You have excellent hearing. That was me.",
+            "A quote attributed to me? Fascinating.",
+            "Indeed."
         ];
-        return catchphrases[Math.floor(Math.random() * catchphrases.length)];
+
+        // 1. Check if we have specific lines for this character
+        const characterKey = Object.keys(replies).find(key => cleanName.includes(key));
+
+        // 2. Select the array (specific or generic)
+        const pool = characterKey ? replies[characterKey] : generic;
+
+        // 3. Return a random item from the selected pool
+        return pool[Math.floor(Math.random() * pool.length)];
     }
 
 </script>
