@@ -1,9 +1,18 @@
 {
   "version": 2,
   "builds": [
-    { "src": "Dockerfile", "use": "@vercel/docker" }
+    {
+      "src": "src/server.py",
+      "use": "@vercel/python",
+      "config": {
+        "includeFiles": "frontend/**"
+      }
+    }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "/$1" }
+    {
+      "src": "/(.*)",
+      "dest": "src/server.py"
+    }
   ]
 }
