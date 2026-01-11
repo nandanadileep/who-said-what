@@ -16,3 +16,12 @@ faiss-cpu
 # Utilities
 scikit-learn
 tqdm
+
+# Web server + static files for frontend
+fastapi
+uvicorn[standard]
+aiofiles
+
+# For scraping images from fandom pages
+requests
+beautifulsoup4

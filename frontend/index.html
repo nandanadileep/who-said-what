@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Who Said What — Y2K</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="container">
+    <header class="hero">
+      <h1 class="logo">WHO SAID WHAT</h1>
+      <p class="tag">type a vague line or personality, get a funny GIF-ish avatar</p>
+    </header>
+
+    <section class="panel">
+      <label for="query">Give me a quote or a vibe</label>
+      <textarea id="query" rows="3" placeholder="e.g. 'Bazinga' or 'nerdy, genius with a spot'></textarea>
+      <div class="controls">
+        <button id="predict">Predict</button>
+        <button id="generate">Generate Image</button>
+        <button id="clear" class="muted">Clear</button>
+      </div>
+    </section>
+
+    <section class="result" id="result">
+      <div class="avatar-wrap" id="avatarWrap">
+        <img src="assets/unknown.svg" id="avatar" alt="avatar">
+      </div>
+      <div class="meta">
+        <h2 id="name">—</h2>
+        <p id="confidence">Confidence: —</p>
+        <pre id="scores" class="scores"></pre>
+      </div>
+    </section>
+
+    <footer class="foot">Made with neon & pixels ✨</footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
