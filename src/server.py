@@ -8,6 +8,7 @@ import re
 import requests
 from bs4 import BeautifulSoup
 import random
+from typing import Optional
 
 # Import predict_character from the same package in a way that works
 # whether this file is run as a module (e.g. `uvicorn src.server`) or
@@ -33,12 +34,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve the frontend from the 'frontend' directory
-frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
-frontend_dir = os.path.abspath(frontend_dir)
-
-if os.path.isdir(frontend_dir):
-    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+# Note: static mount moved to the bottom of this file so API routes
+# (e.g. POST /api/predict) are registered first and not intercepted by StaticFiles.
 
 
 @app.post('/api/predict')
@@ -240,5 +237,91 @@ async def api_predict(payload: Request):
     return JSONResponse(result)
 
 
+@app.post('/api/predict_demo')
+async def api_predict_demo(payload: Request):
+    """Lightweight demo prediction that doesn't require the embedding index.
+
+    Useful for local development when the vector index or heavy deps are unavailable.
+    """
+    data = await payload.json()
+    query = (data.get('query') or '').strip()
+    if not query:
+        return JSONResponse({"error": "Empty query"}, status_code=400)
+
+    # Simple heuristic: match character name in query, otherwise pick random main character
+    try:
+        from .character_config import MAIN_CHARACTERS
+    except Exception:
+        from character_config import MAIN_CHARACTERS
+
+    ql = query.lower()
+    chosen: Optional[str] = None
+    for c in MAIN_CHARACTERS:
+        if c.lower() in ql:
+            chosen = c
+            confidence = 0.92
+            break
+
+    if not chosen:
+        chosen = random.choice(list(MAIN_CHARACTERS))
+        confidence = round(random.uniform(0.45, 0.85), 2)
+
+    # build scores: chosen gets majority, others small probs
+    others = [c for c in MAIN_CHARACTERS if c != chosen]
+    base = 1.0
+    scores = {chosen: round(0.6 + (confidence - 0.5) * 0.6, 3)}
+    rem = 1.0 - scores[chosen]
+    if others:
+        per = rem / len(others)
+        for o in others:
+            scores[o] = round(per, 3)
+
+    # Attempt to locate a local image in assets (remote cache or curated characters)
+    local_image = None
+    try:
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'assets'))
+        slug = re.sub(r'[^a-z0-9]+', '_', chosen.lower())[:60]
+
+        # Check curated character folder
+        char_dir = os.path.join(base_dir, 'characters', slug)
+        if os.path.isdir(char_dir):
+            files = [f for f in os.listdir(char_dir) if os.path.isfile(os.path.join(char_dir, f))]
+            if files:
+                local_image = f"/assets/characters/{slug}/{random.choice(files)}"
+
+        # Check remote cache
+        if not local_image:
+            remote_files = [f for f in os.listdir(os.path.join(base_dir, 'remote')) if f.lower().startswith(slug + '_')]
+            if remote_files:
+                local_image = f"/assets/remote/{random.choice(remote_files)}"
+
+        # Check single SVG fallback
+        if not local_image:
+            svg_path = os.path.join(base_dir, f"{slug}.svg")
+            if os.path.exists(svg_path):
+                local_image = f"/assets/{slug}.svg"
+    except Exception:
+        local_image = None
+
+    result = {
+        'prediction': chosen,
+        'confidence': confidence,
+        'all_scores': scores,
+        'image': None,
+        'local_image': local_image,
+        'method': 'demo',
+    }
+
+    return JSONResponse(result)
+
+
 if __name__ == '__main__':
     uvicorn.run("src.server:app", host="0.0.0.0", port=8000, log_level="info")
+
+
+# Serve the frontend from the 'frontend' directory (mount after API routes)
+frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
+frontend_dir = os.path.abspath(frontend_dir)
+
+if os.path.isdir(frontend_dir):
+    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")

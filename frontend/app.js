@@ -42,14 +42,29 @@ async function predict(){
   scoresEl.textContent = '';
 
   try{
-    const res = await fetch('/api/predict', {
+    let res = null;
+    try{
+      res = await fetch('/api/predict', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({query: q, min_confidence: 0.2})
     });
+    }catch(e){
+      // network error calling primary endpoint, fall back to demo
+      try{
+        res = await fetch('/api/predict_demo', {
+          method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({query: q, min_confidence: 0.2})
+        });
+      }catch(e2){
+        nameEl.textContent = 'Network Error';
+        avatar.src = 'assets/unknown.svg';
+        scoresEl.textContent = e.toString();
+        return;
+      }
+    }
 
     if(!res.ok){
-      const err = await res.json();
+      const err = await res.json().catch(()=>({status:res.status}));
       nameEl.textContent = 'Error';
       scoresEl.textContent = JSON.stringify(err);
       avatar.src = 'assets/unknown.svg';
