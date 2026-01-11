@@ -86,7 +86,8 @@ async function predict(){
     }
 
     nameEl.textContent = char || 'Unknown';
-    confEl.textContent = `Confidence: ${Math.round(conf*100)}%`;
+    // Do not display confidence in the UI tweet card per request.
+    confEl.textContent = '';
     scoresEl.textContent = Object.entries(scores).map(([k,v])=>`${k}: ${v}`).join('\n');
 
   }catch(e){

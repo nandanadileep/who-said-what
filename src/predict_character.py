@@ -115,7 +115,7 @@ def predict_character(
     query: str, 
     k: int = 20,
     score_method="inverse_distance",
-    min_confidence=0.3
+    min_confidence=0.25
 ):
     """
     Pure RAG-based character prediction with advanced retrieval techniques.

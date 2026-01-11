@@ -315,13 +315,14 @@ async def api_predict_demo(payload: Request):
     return JSONResponse(result)
 
 
-if __name__ == '__main__':
-    uvicorn.run("src.server:app", host="0.0.0.0", port=8000, log_level="info")
-
-
 # Serve the frontend from the 'frontend' directory (mount after API routes)
 frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
 frontend_dir = os.path.abspath(frontend_dir)
 
 if os.path.isdir(frontend_dir):
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+
+
+if __name__ == '__main__':
+    # Now the frontend is registered BEFORE the server starts
+    uvicorn.run("src.server:app", host="0.0.0.0", port=8000, log_level="info")
