@@ -39,36 +39,41 @@
         /* --- LAYOUT GRID --- */
         .layout {
             display: grid;
-            grid-template-columns: 275px 600px 350px;
+            grid-template-columns: 240px minmax(0, 1fr) 300px; /* Sidebar | Feed | Widgets */
             gap: 0;
             max-width: 1250px;
             margin: 0 auto;
             min-height: 100vh;
+            padding: 12px;
         }
 
-        @media (max-width: 1024px) {
-            .layout { grid-template-columns: 88px 600px 290px; }
+        /* Medium screens: reduce sidebars */
+        @media (max-width: 1100px) {
+            .layout { grid-template-columns: 88px minmax(0, 1fr) 260px; }
             .nav-label { display: none; }
             .tweet-btn-large { display: none; }
             .tweet-btn-icon { display: block !important; }
         }
 
+        /* Narrow screens: hide right widgets */
         @media (max-width: 900px) {
-            .layout { grid-template-columns: 88px 1fr 0; }
+            .layout { grid-template-columns: 88px 1fr; grid-auto-columns: 0; }
             .right-sidebar { display: none; }
         }
 
-        @media (max-width: 500px) {
-            .layout { grid-template-columns: 0 1fr 0; }
+        /* Mobile: single column feed, bottom navigation */
+        @media (max-width: 600px) {
+            .layout { grid-template-columns: 1fr; padding: 8px; }
             .left-sidebar { 
-                position: fixed; bottom: 0; width: 100%; height: 55px; 
+                position: fixed; bottom: 0; left: 0; right: 0; height: 60px; 
                 flex-direction: row; justify-content: space-around; 
                 background: var(--bg-color); border-top: 1px solid var(--border-color);
                 padding: 0; z-index: 100;
             }
             .logo-box { display: none; }
             .nav-item { padding: 10px; }
-            .main-feed { border: none; margin-bottom: 60px; }
+            .main-feed { border: none; margin-bottom: 70px; }
+            .right-sidebar { display: none; }
         }
 
         /* --- LEFT SIDEBAR --- */
@@ -193,11 +198,13 @@
             border-bottom: 1px solid var(--border-color);
         }
         .user-avatar {
-            width: 40px; height: 40px;
+            width: clamp(36px, 5.6vw, 56px);
+            height: clamp(36px, 5.6vw, 56px);
             border-radius: 50%;
             background-color: #333;
             object-fit: cover;
             margin-right: 12px;
+            flex-shrink: 0;
         }
         .compose-right { flex: 1; }
         .compose-input {
@@ -251,15 +258,18 @@
             padding: 12px 16px;
             border-bottom: 1px solid var(--border-color);
             display: flex;
+            gap: 12px;
             cursor: pointer;
             transition: 0.2s;
             position: relative;
+            align-items: flex-start;
         }
         .tweet:hover { background-color: rgba(255, 255, 255, 0.02); }
         
+        /* Thread / Reply Connector Line */
         .thread-line {
             position: absolute;
-            left: 36px;
+            left: 36px; /* center of 40px avatar + 16px pad */
             top: 52px;
             bottom: -12px;
             width: 2px;
@@ -273,7 +283,6 @@
             display: flex;
             align-items: baseline;
             margin-bottom: 4px;
-            flex-wrap: wrap;
         }
         .user-name { font-weight: 700; color: var(--text-main); margin-right: 5px; }
         .user-handle { color: var(--text-secondary); margin-right: 5px; }
@@ -298,6 +307,7 @@
             font-size: 13px;
             cursor: pointer;
             transition: color 0.2s;
+            group-hover: 
         }
         .action-icon {
             width: 18px; height: 18px;
@@ -317,151 +327,6 @@
 
         .liked { color: var(--red-like) !important; }
         .liked svg { fill: var(--red-like); }
-
-        /* --- CONFIDENCE BADGE --- */
-        .confidence-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 11px;
-            font-weight: 600;
-            margin-left: 8px;
-            opacity: 0.8;
-        }
-        .confidence-high { background: rgba(0, 186, 124, 0.15); color: var(--green-retweet); }
-        .confidence-medium { background: rgba(255, 212, 0, 0.15); color: #ffd400; }
-        .confidence-low { background: rgba(249, 24, 128, 0.15); color: var(--red-like); }
-        
-        .confidence-dot {
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            background: currentColor;
-        }
-
-        /* --- TYPING INDICATOR --- */
-        .typing-indicator {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 8px 12px;
-            opacity: 0.6;
-        }
-        .typing-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background-color: var(--text-secondary);
-            animation: typing 1.4s infinite;
-        }
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes typing {
-            0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
-            30% { opacity: 1; transform: scale(1); }
-        }
-
-        /* --- SLIDE IN ANIMATION --- */
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .tweet-new {
-            animation: slideIn 0.4s ease-out;
-        }
-
-        /* --- EXAMPLE QUOTES --- */
-        .examples-section {
-            padding: 16px;
-            border-bottom: 1px solid var(--border-color);
-            background: linear-gradient(180deg, rgba(29, 155, 240, 0.03) 0%, transparent 100%);
-        }
-        .examples-header {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-bottom: 12px;
-            font-weight: 600;
-        }
-        .example-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .example-chip {
-            background: rgba(29, 155, 240, 0.1);
-            border: 1px solid rgba(29, 155, 240, 0.2);
-            color: var(--accent-blue);
-            padding: 6px 12px;
-            border-radius: 16px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .example-chip:hover {
-            background: rgba(29, 155, 240, 0.2);
-            border-color: rgba(29, 155, 240, 0.4);
-            transform: translateY(-1px);
-        }
-
-        /* --- CHARACTER GALLERY --- */
-        .widget.characters {
-            background: linear-gradient(135deg, rgba(29, 155, 240, 0.05) 0%, rgba(29, 155, 240, 0.02) 100%);
-        }
-        .character-item {
-            display: flex;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .character-item:last-child { border-bottom: none; }
-        .character-avatar-small {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            margin-right: 12px;
-            border: 2px solid rgba(29, 155, 240, 0.3);
-        }
-        .character-stats {
-            flex: 1;
-        }
-        .character-stats-name {
-            font-weight: 600;
-            font-size: 14px;
-        }
-        .character-stats-count {
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        /* --- EMPTY STATE --- */
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-secondary);
-        }
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-            opacity: 0.3;
-        }
-        .empty-state-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--text-main);
-            margin-bottom: 8px;
-        }
-        .empty-state-subtitle {
-            font-size: 15px;
-            line-height: 1.5;
-        }
 
         /* --- RIGHT SIDEBAR --- */
         .right-sidebar {
@@ -506,6 +371,23 @@
         }
         .trend-meta { font-size: 13px; color: var(--text-secondary); }
         .trend-name { font-weight: 700; margin: 2px 0; }
+        
+        .follow-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .follow-avatar { width: clamp(32px,4.6vw,48px); height: clamp(32px,4.6vw,48px); border-radius: 50%; margin-right: 10px; object-fit: cover; }
+        .follow-info { flex: 1; }
+        .follow-btn {
+            background-color: var(--text-main);
+            color: black;
+            font-weight: 600;
+            padding: 6px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+        }
+        .follow-btn:hover { opacity: 0.9; }
 
         /* --- LOADING SPINNER --- */
         .spinner {
@@ -561,11 +443,11 @@
         
         <div style="padding: 12px; display: flex; align-items: center; margin-bottom: 20px; cursor: pointer;">
             <img src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" class="user-avatar" alt="Me">
-            <div style="flex: 1; display: none;">
+            <div style="flex: 1; display: none; @media(min-width: 1024px){ display: block; }">
                 <div style="font-weight: 700;">User</div>
                 <div style="color: var(--text-secondary);">@user</div>
             </div>
-            <div style="display: none;">...</div>
+            <div style="display: none; @media(min-width: 1024px){ display: block; }">...</div>
         </div>
     </header>
 
@@ -598,62 +480,31 @@
             </div>
         </div>
 
-        <div class="examples-section">
-            <div class="examples-header">Try these iconic quotes:</div>
-            <div class="example-chips">
-                <div class="example-chip" onclick="tryExample(this)">I'm not crazy, my mother had me tested</div>
-                <div class="example-chip" onclick="tryExample(this)">Bazinga!</div>
-                <div class="example-chip" onclick="tryExample(this)">That's my spot</div>
-                <div class="example-chip" onclick="tryExample(this)">Soft kitty, warm kitty</div>
-            </div>
+        <div id="feed-stream">
+            <article class="tweet">
+                <img src="https://bigbangtheory.fandom.com/wiki/Special:FilePath/Sheldon_Cooper.jpg" class="user-avatar" style="background-color: #555;" onerror="this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'">
+                <div class="tweet-content">
+                    <div class="tweet-header">
+                        <span class="user-name">Sheldon Cooper</span>
+                        <span class="user-handle">@dr_sheldon_cooper</span>
+                        <span class="time">· 2h</span>
+                    </div>
+                    <div class="tweet-text">I'm not crazy, my mother had me tested.</div>
+                    <div class="tweet-actions">
+                        <div class="action-item blue"><svg class="action-icon" viewBox="0 0 24 24"><path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path></svg> 24</div>
+                        <div class="action-item green"><svg class="action-icon" viewBox="0 0 24 24"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></svg> 5</div>
+                        <div class="action-item red" onclick="toggleLike(this)"><svg class="action-icon" viewBox="0 0 24 24"><path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.605 3.01.894 1.81.844 4.17-.518 6.67z"></path></svg> 1.2K</div>
+                        <div class="action-item"><svg class="action-icon" viewBox="0 0 24 24"><path d="M8.75 21V3h2v18h-2zM18 21V8.5h2V21h-2zM4 21l.004-10h2L6 21H4zm9.248 0v-7h2v7h-2z"></path></svg> 12K</div>
+                    </div>
+                </div>
+            </article>
         </div>
-
-        <div id="feed-stream"></div>
     </main>
 
     <aside class="right-sidebar">
         <div class="search-box">
             <svg class="search-icon" viewBox="0 0 24 24"><path d="M10.25 3.75c-3.59 0-6.5 2.91-6.5 6.5s2.91 6.5 6.5 6.5c1.795 0 3.419-.726 4.596-1.904 1.178-1.177 1.904-2.801 1.904-4.596 0-3.59-2.91-6.5-6.5-6.5zm-8.5 6.5c0-4.694 3.806-8.5 8.5-8.5s8.5 3.806 8.5 8.5c0 1.986-.73 3.815-1.945 5.207l4.72 4.72c.39.39.39 1.023 0 1.414-.195.195-.451.293-.707.293s-.512-.098-.707-.293l-4.72-4.72c-1.391 1.216-3.221 1.945-5.207 1.945-4.694 0-8.5-3.806-8.5-8.5z"></path></svg>
             <input type="text" class="search-input" placeholder="Search">
-        </div>
-
-        <div class="widget characters">
-            <div class="widget-header">🎬 Recognized Characters</div>
-            <div class="character-item">
-                <img src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" class="character-avatar-small">
-                <div class="character-stats">
-                    <div class="character-stats-name">Sheldon Cooper</div>
-                    <div class="character-stats-count">Theoretical Physicist</div>
-                </div>
-            </div>
-            <div class="character-item">
-                <img src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" class="character-avatar-small">
-                <div class="character-stats">
-                    <div class="character-stats-name">Leonard Hofstadter</div>
-                    <div class="character-stats-count">Experimental Physicist</div>
-                </div>
-            </div>
-            <div class="character-item">
-                <img src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" class="character-avatar-small">
-                <div class="character-stats">
-                    <div class="character-stats-name">Penny</div>
-                    <div class="character-stats-count">Actress / Waitress</div>
-                </div>
-            </div>
-            <div class="character-item">
-                <img src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" class="character-avatar-small">
-                <div class="character-stats">
-                    <div class="character-stats-name">Howard Wolowitz</div>
-                    <div class="character-stats-count">Aerospace Engineer</div>
-                </div>
-            </div>
-            <div class="character-item">
-                <img src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" class="character-avatar-small">
-                <div class="character-stats">
-                    <div class="character-stats-name">Raj Koothrappali</div>
-                    <div class="character-stats-count">Astrophysicist</div>
-                </div>
-            </div>
         </div>
 
         <div class="widget">
@@ -674,6 +525,26 @@
                 <div class="trend-meta">10.5K posts</div>
             </div>
         </div>
+
+        <div class="widget">
+            <div class="widget-header">Who to follow</div>
+            <div class="follow-item">
+                <img src="https://bigbangtheory.fandom.com/wiki/Special:FilePath/Penny.jpg" class="follow-avatar" onerror="this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'">
+                <div class="follow-info">
+                    <div style="font-weight: 700;">Penny</div>
+                    <div style="color: var(--text-secondary); font-size: 13px;">@penny_hofstadter</div>
+                </div>
+                <button class="follow-btn">Follow</button>
+            </div>
+            <div class="follow-item">
+                <img src="https://bigbangtheory.fandom.com/wiki/Special:FilePath/Leonard_Hofstadter.jpg" class="follow-avatar" onerror="this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'">
+                <div class="follow-info">
+                    <div style="font-weight: 700;">Leonard</div>
+                    <div style="color: var(--text-secondary); font-size: 13px;">@leonard_h</div>
+                </div>
+                <button class="follow-btn">Follow</button>
+            </div>
+        </div>
     </aside>
 </div>
 
@@ -686,40 +557,6 @@
 
     // --- STATE ---
     let isProcessing = false;
-
-    // --- SHOW EMPTY STATE ON LOAD ---
-    showEmptyState();
-
-    function showEmptyState() {
-        if (feedStream.children.length === 0) {
-            feedStream.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">🎬</div>
-                    <div class="empty-state-title">No quotes yet!</div>
-                    <div class="empty-state-subtitle">
-                        Try typing a Big Bang Theory quote above<br>
-                        or click one of the examples to get started.
-                    </div>
-                </div>
-            `;
-        }
-    }
-
-    function clearEmptyState() {
-        const emptyState = feedStream.querySelector('.empty-state');
-        if (emptyState) {
-            emptyState.remove();
-        }
-    }
-
-    // --- EXAMPLE CHIP CLICK ---
-    window.tryExample = function(chip) {
-        composeInput.value = chip.textContent;
-        composeInput.style.height = 'auto';
-        composeInput.style.height = (composeInput.scrollHeight) + 'px';
-        postBtn.classList.add('active');
-        composeInput.focus();
-    }
 
     // --- AUTO RESIZE TEXTAREA ---
     composeInput.addEventListener('input', function() {
@@ -740,9 +577,6 @@
         const text = composeInput.value.trim();
         if (!text) return;
 
-        // Clear empty state
-        clearEmptyState();
-
         // UI Updates: Disable input, show spinner
         isProcessing = true;
         postBtn.classList.remove('active');
@@ -757,13 +591,8 @@
         composeInput.value = '';
         composeInput.style.height = 'auto';
 
-        // 2. Show typing indicator
-        const typingId = 'typing-' + Date.now();
-        showTypingIndicator(typingId);
-
-        // 3. Call Backend API
+        // 2. Call Backend API
         try {
-            // Replace this with your actual API endpoint
             const response = await fetch('/api/predict', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -773,39 +602,28 @@
             if (!response.ok) throw new Error('API Error');
             const data = await response.json();
 
-            removeTypingIndicator(typingId);
-            
-            // Extract prediction data
+            // 3. Render Character Reply
             const charName = data.prediction || 'Unknown';
-            const confidence = data.confidence || 0.5;
-            const charImg = data.image_url || 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
-            const replyText = getCharacterReply(charName, confidence);
+            // Logic: prefer local_image if valid, else image_url, else fallback
+            let charImg = data.local_image;
+            if (!charImg && data.image) charImg = data.image;
+            if (!charImg) charImg = `assets/${charName.toLowerCase().replace(/[^a-z0-9]/g, '_')}.svg`; // Fallback from original logic
+
+            const replyText = getCharacterReply(charName);
             
-            renderTweet(replyText, charName, `@${charName.replace(' ', '_').toLowerCase()}`, '1s', charImg, true, null, userTweetId, confidence);
-            finishPost();
+            // Add a small delay for "realism"
+            setTimeout(() => {
+                renderTweet(replyText, charName, `@${charName.replace(' ', '_').toLowerCase()}`, '1s', charImg, true, null, userTweetId);
+                finishPost();
+            }, 800);
 
         } catch (error) {
-            console.error('API Error:', error);
-            
-            // Fallback with simulated data if API fails
-            removeTypingIndicator(typingId);
-            
-            const mockPredictions = [
-                { char: 'Sheldon Cooper', confidence: 0.95 },
-                { char: 'Leonard Hofstadter', confidence: 0.72 },
-                { char: 'Penny', confidence: 0.58 },
-                { char: 'Howard Wolowitz', confidence: 0.81 },
-                { char: 'Raj Koothrappali', confidence: 0.67 }
-            ];
-            const result = mockPredictions[Math.floor(Math.random() * mockPredictions.length)];
-            
-            const charName = result.char;
-            const confidence = result.confidence;
-            const charImg = 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
-            const replyText = getCharacterReply(charName, confidence);
-            
-            renderTweet(replyText, charName, `@${charName.replace(' ', '_').toLowerCase()}`, '1s', charImg, true, null, userTweetId, confidence);
-            finishPost();
+            console.error(error);
+            // Fallback for demo if API fails
+            setTimeout(() => {
+                renderTweet("I couldn't reach the server, but that sounded like Sheldon.", "System", "@server_bot", "1s", "", true, null, userTweetId);
+                finishPost();
+            }, 500);
         }
     });
 
@@ -816,49 +634,17 @@
         composeInput.focus();
     }
 
-    // --- TYPING INDICATOR ---
-    function showTypingIndicator(id) {
+    // --- RENDER TWEET FUNCTION ---
+    function renderTweet(text, name, handle, time, avatarUrl, isReply, id, replyToId) {
         const article = document.createElement('article');
         article.className = 'tweet';
-        article.id = id;
-        article.innerHTML = `
-            <img src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" class="user-avatar">
-            <div class="tweet-content">
-                <div class="typing-indicator">
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                </div>
-            </div>
-        `;
-        feedStream.insertBefore(article, feedStream.firstChild);
-    }
-
-    function removeTypingIndicator(id) {
-        const indicator = document.getElementById(id);
-        if (indicator) {
-            indicator.remove();
-        }
-    }
-
-    // --- RENDER TWEET FUNCTION ---
-    function renderTweet(text, name, handle, time, avatarUrl, isReply, id, replyToId, confidence) {
-        const article = document.createElement('article');
-        article.className = 'tweet tweet-new';
         if (isReply) article.classList.add('reply');
         
+        // Handle missing images gracefully
         const safeAvatar = avatarUrl || 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
 
-        // Confidence badge (only for AI replies)
-        let confidenceBadge = '';
-        if (confidence !== undefined && isReply) {
-            const percentage = Math.round(confidence * 100);
-            let confidenceClass = 'confidence-low';
-            if (confidence >= 0.8) confidenceClass = 'confidence-high';
-            else if (confidence >= 0.6) confidenceClass = 'confidence-medium';
-            
-            confidenceBadge = `<span class="confidence-badge ${confidenceClass}"><span class="confidence-dot"></span>${percentage}%</span>`;
-        }
+        // If it's a reply, we can visually connect it (optional, simplifed here)
+        // Note: In a real React app we'd link these via ID. Here we just prepend to feed.
         
         const html = `
             ${!isReply && id ? `<div class="thread-line" id="line-${id}"></div>` : ''}
@@ -868,20 +654,26 @@
                     <span class="user-name">${name}</span>
                     <span class="user-handle">${handle}</span>
                     <span class="time">· ${time}</span>
-                    ${confidenceBadge}
                 </div>
                 <div class="tweet-text">${text}</div>
                 <div class="tweet-actions">
-                    <div class="action-item blue"><svg class="action-icon" viewBox="0 0 24 24"><path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path></svg> <span>0</span></div>
-                    <div class="action-item green"><svg class="action-icon" viewBox="0 0 24 24"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></svg> <span>0</span></div>
+                    <div class="action-item blue"><svg class="action-icon" viewBox="0 0 24 24"><path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path></svg> 0</div>
+                    <div class="action-item green"><svg class="action-icon" viewBox="0 0 24 24"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></svg> 0</div>
                     <div class="action-item red" onclick="toggleLike(this)"><svg class="action-icon" viewBox="0 0 24 24"><path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.605 3.01.894 1.81.844 4.17-.518 6.67z"></path></svg> <span class="like-count">0</span></div>
-                    <div class="action-item"><svg class="action-icon" viewBox="0 0 24 24"><path d="M8.75 21V3h2v18h-2zM18 21V8.5h2V21h-2zM4 21l.004-10h2L6 21H4zm9.248 0v-7h2v7h-2z"></path></svg> <span>0</span></div>
+                    <div class="action-item"><svg class="action-icon" viewBox="0 0 24 24"><path d="M8.75 21V3h2v18h-2zM18 21V8.5h2V21h-2zM4 21l.004-10h2L6 21H4zm9.248 0v-7h2v7h-2z"></path></svg> 0</div>
                 </div>
             </div>
         `;
         article.innerHTML = html;
 
-        feedStream.insertBefore(article, feedStream.firstChild);
+        // Insert logic: Newest at top
+        if (replyToId) {
+            // Find the original tweet and insert after it
+            // Simple approach for this demo: just insert at top (Twitter style is chronological)
+            feedStream.insertBefore(article, feedStream.firstChild);
+        } else {
+            feedStream.insertBefore(article, feedStream.firstChild);
+        }
     }
 
     // --- LIKE TOGGLE ---
@@ -899,38 +691,17 @@
         countSpan.innerText = count;
     }
 
-    // --- RANDOM REPLIES BASED ON CONFIDENCE ---
-    function getCharacterReply(name, confidence) {
-        const replies = {
-            high: [
-                `That is my dialogue! Bazinga! 🎯`,
-                `I believe I said that. Obviously.`,
-                `That sounds exactly like something I would say.`,
-                `Correct. That was definitely me.`,
-                `Yes, that's one of my more memorable lines.`
-            ],
-            medium: [
-                `Are you mocking me? Because that might be my line.`,
-                `That does sound familiar...`,
-                `I think I said something like that once.`,
-                `Possibly me, though I'm not entirely certain.`,
-                `That sounds like something I would say, perhaps.`
-            ],
-            low: [
-                `Hmm, that could be anyone really.`,
-                `I'm not sure who said that.`,
-                `That's a tough one to identify.`,
-                `The confidence is low on this one.`,
-                `I may have said that, but I can't be sure.`
-            ]
-        };
-
-        let category = 'low';
-        if (confidence >= 0.8) category = 'high';
-        else if (confidence >= 0.6) category = 'medium';
-
-        const categoryReplies = replies[category];
-        return categoryReplies[Math.floor(Math.random() * categoryReplies.length)];
+    // --- RANDOM REPLIES ---
+    function getCharacterReply(name) {
+        const catchphrases = [
+            "That is my dialogue! Bazinga!",
+            "I believe I said that.",
+            "That sounds exactly like something I would say.",
+            "Correct. That was me.",
+            "Are you mocking me? Because that is my line.",
+            "Oh look, someone is quoting me."
+        ];
+        return catchphrases[Math.floor(Math.random() * catchphrases.length)];
     }
 
 </script>

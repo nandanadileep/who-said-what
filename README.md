@@ -27,3 +27,20 @@ Notes
 
 Troubleshooting
 - If you see `No documents retrieved` or low confidence, build the index with more data using `src/build_index.py` and the dataset in `data/raw`.
+
+### Deploying to Vercel (container)
+This project can be deployed to Vercel using a Docker container. A `Dockerfile` and `vercel.json` are included.
+
+Quick steps:
+1. Install the Vercel CLI: `npm i -g vercel` (or use the web UI).
+2. From the project root run:
+
+```bash
+vercel deploy --prod
+```
+
+Notes & caveats:
+- The model/embedding dependencies (e.g. `faiss-cpu`, `sentence-transformers`) are large and may fail to build on Vercel or exceed limits. Using Docker helps but you may hit platform resource or build-time limits.
+- If you encounter build or runtime errors for heavy ML packages, consider hosting the backend on a container-friendly host (Render, Fly, DigitalOcean, Railway) and deploying only the static frontend to Vercel.
+- When deploying, ensure your `data/index/faiss` index is available (you may need to populate it in the container or point to an external model service).
+
