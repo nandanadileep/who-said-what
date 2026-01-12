@@ -324,5 +324,6 @@ if os.path.isdir(frontend_dir):
 
 
 if __name__ == '__main__':
-    # Now the frontend is registered BEFORE the server starts
-    uvicorn.run("src.server:app", host="0.0.0.0", port=8000, log_level="info")
+    # When executed as a script, pass the app object directly to uvicorn
+    # to avoid import-time ModuleNotFoundError for the 'src' package.
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
