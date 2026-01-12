@@ -1,5 +1,4 @@
 // --- CONFIGURATION ---
-// This points to your Python backend on Hugging Face
 const BACKEND_URL = 'https://ndileep-thebigbangtheorytweet.hf.space';
 const API_URL = `${BACKEND_URL}/api/predict`;
 
@@ -18,7 +17,6 @@ if (composeInput) {
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
         
-        // Enable/Disable Button
         if (this.value.trim().length > 0) {
             postBtn.classList.add('active');
         } else {
@@ -34,14 +32,13 @@ if (postBtn) {
         const text = composeInput.value.trim();
         if (!text) return;
 
-        // 1. UI Updates: Disable input, show spinner in button
         isProcessing = true;
         postBtn.classList.remove('active');
         composeInput.disabled = true;
         spinner.style.display = 'block';
 
-        // 2. Render User's Post Immediately
-        const userTweetId = Date.now();
+        // 1. Render User's Post (New thread starter)
+        const userTweetId = Date.now(); // Unique ID for this post
         renderTweet(
             text, 
             'User', 
@@ -52,14 +49,13 @@ if (postBtn) {
             userTweetId
         );
 
-        // Clear Input
         composeInput.value = '';
         composeInput.style.height = 'auto';
 
-        // 3. SHOW TYPING INDICATOR IN FEED
-        const loadingElement = showTypingIndicator();
+        // 2. Show Typing Indicator (Insert it specifically AFTER the user's post)
+        const loadingElement = showTypingIndicator(userTweetId);
 
-        // 4. Call Backend API
+        // 3. Call Backend API
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
@@ -67,7 +63,6 @@ if (postBtn) {
                 body: JSON.stringify({ query: text, min_confidence: 0.2 })
             });
 
-            // Attempt to surface server messages if present
             const textResp = await response.text().catch(() => null);
             if (!response.ok) {
                 const errMsg = textResp || response.statusText || 'API Error';
@@ -75,29 +70,20 @@ if (postBtn) {
             }
 
             const data = textResp ? JSON.parse(textResp) : {};
-
-            // Process Character Data
             const charName = data.prediction || 'Unknown';
             let charImg = data.local_image || data.image;
 
-            // --- IMAGE FIX ---
-            // If the backend gives us a relative path (like "/assets/remote/..."),
-            // we prepend the Hugging Face URL so the browser can find it.
             if (charImg && charImg.startsWith('/')) {
                 charImg = BACKEND_URL + charImg;
             }
-            
-            // If no image is found, set to empty string so the <img> onerror tag triggers
-            if (!charImg) {
-                charImg = '';
-            }
+            if (!charImg) charImg = '';
 
             const replyText = getCharacterReply(charName);
             
-            // Artificial delay to let the user see the "typing" animation
             setTimeout(() => {
                 if (loadingElement) loadingElement.remove();
 
+                // 4. Render Bot Reply (Pass replyToId so it goes UNDER the user post)
                 renderTweet(
                     replyText, 
                     charName, 
@@ -106,20 +92,16 @@ if (postBtn) {
                     charImg, 
                     true, 
                     null, 
-                    userTweetId
+                    userTweetId // This tells the function: "Put this AFTER tweet #userTweetId"
                 );
                 finishPost();
             }, 1500);
 
         } catch (error) {
             console.error('Predict API error:', error);
-            // Remove typing indicator immediately
             if (loadingElement) loadingElement.remove();
-
-            // Show a friendly error message
             showError('Server error: ' + error.message);
-
-            // Fallback reply for demo so user sees result flow
+            
             setTimeout(() => {
                 renderTweet(
                     "I couldn't reach the server, but that sounded like Sheldon.", 
@@ -144,11 +126,10 @@ function finishPost() {
     composeInput.focus();
 }
 
-// --- RENDER TYPING INDICATOR ---
-function showTypingIndicator() {
+// --- UPDATED: Render Typing Indicator AFTER the specific post ---
+function showTypingIndicator(replyToId) {
     const article = document.createElement('article');
     article.className = 'tweet loading-state';
-    
     article.innerHTML = `
         <div class="user-avatar" style="background: transparent;"></div>
         <div class="tweet-content">
@@ -163,20 +144,37 @@ function showTypingIndicator() {
         </div>
     `;
     
-    feedStream.insertBefore(article, feedStream.firstChild);
+    // Find the user's post to insert this AFTER
+    const parentPost = document.getElementById('tweet-' + replyToId);
+    if (parentPost && parentPost.nextSibling) {
+        feedStream.insertBefore(article, parentPost.nextSibling);
+    } else if (parentPost) {
+        feedStream.appendChild(article);
+    } else {
+        // Fallback (shouldn't happen)
+        feedStream.insertBefore(article, feedStream.firstChild);
+    }
+    
     return article; 
 }
 
-// --- RENDER TWEET FUNCTION ---
+// --- UPDATED: RENDER TWEET FUNCTION ---
 function renderTweet(text, name, handle, time, avatarUrl, isReply, id, replyToId) {
     const article = document.createElement('article');
     article.className = 'tweet';
     if (isReply) article.classList.add('reply');
     
+    // Give the tweet an ID so we can find it later (e.g., "tweet-173849...")
+    if (id) {
+        article.id = 'tweet-' + id;
+    }
+
     const safeAvatar = avatarUrl || 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
 
+    // Only draw the thread line if this is a User Post (not a reply) 
+    // and it has an ID
     const html = `
-        ${!isReply && id ? `<div class="thread-line" id="line-${id}"></div>` : ''}
+        ${(!isReply && id) ? `<div class="thread-line"></div>` : ''}
         <img src="${safeAvatar}" class="user-avatar" onerror="this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'">
         <div class="tweet-content">
             <div class="tweet-header">
@@ -195,17 +193,26 @@ function renderTweet(text, name, handle, time, avatarUrl, isReply, id, replyToId
     `;
     article.innerHTML = html;
 
+    // --- INSERTION LOGIC ---
     if (replyToId) {
-        feedStream.insertBefore(article, feedStream.firstChild);
+        // This is a REPLY. It should go AFTER the parent tweet.
+        const parentTweet = document.getElementById('tweet-' + replyToId);
+        if (parentTweet && parentTweet.nextSibling) {
+            feedStream.insertBefore(article, parentTweet.nextSibling);
+        } else if (parentTweet) {
+            feedStream.appendChild(article);
+        } else {
+            // Fallback: Just put it at the top if we can't find parent
+            feedStream.insertBefore(article, feedStream.firstChild);
+        }
     } else {
+        // This is a NEW USER POST. It should go at the VERY TOP.
         feedStream.insertBefore(article, feedStream.firstChild);
     }
 }
 
-// --- LIKE TOGGLE (Global Scope for HTML onclick) ---
 window.toggleLike = function(el) {
     el.classList.toggle('liked');
-
     let countSpan = el.querySelector('.like-count');
     if (!countSpan) {
         const textNode = Array.from(el.childNodes).find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
@@ -216,17 +223,11 @@ window.toggleLike = function(el) {
         countSpan.innerText = txt;
         el.appendChild(countSpan);
     }
-
     const raw = (countSpan.innerText || '').trim();
     let count = parseAbbreviatedNumber(raw);
     if (isNaN(count)) count = 0;
-
-    if (el.classList.contains('liked')) {
-        count++;
-    } else {
-        count = Math.max(0, count - 1);
-    }
-
+    if (el.classList.contains('liked')) count++;
+    else count = Math.max(0, count - 1);
     countSpan.innerText = formatAbbreviatedNumber(count);
 }
 
@@ -245,23 +246,15 @@ function parseAbbreviatedNumber(str) {
 }
 
 function formatAbbreviatedNumber(n) {
-    if (n >= 1000000) {
-        const v = (n / 1000000);
-        return (Math.round(v * 10) / 10).toString().replace(/\.0$/, '') + 'M';
-    }
-    if (n >= 1000) {
-        const v = (n / 1000);
-        return (Math.round(v * 10) / 10).toString().replace(/\.0$/, '') + 'K';
-    }
+    if (n >= 1000000) return (Math.round((n / 1000000) * 10) / 10).toString().replace(/\.0$/, '') + 'M';
+    if (n >= 1000) return (Math.round((n / 1000) * 10) / 10).toString().replace(/\.0$/, '') + 'K';
     return String(n);
 }
 
-// --- ERROR DISPLAY ---
 function showError(message) {
     try {
         const existing = document.getElementById('api-error-widget');
         if (existing) existing.remove();
-
         const box = document.createElement('div');
         box.id = 'api-error-widget';
         box.className = 'widget';
@@ -276,10 +269,8 @@ function showError(message) {
             </div>
             <div style="color:var(--text-secondary);font-size:14px;">${message}</div>
         `;
-
         const closeBtn = box.querySelector('button');
         closeBtn.addEventListener('click', () => box.remove());
-
         feedStream.insertBefore(box, feedStream.firstChild);
     } catch (e) {
         console.error('Failed to show error widget', e);
@@ -287,72 +278,45 @@ function showError(message) {
     }
 }
 
-// --- CHARACTER REPLIES ---
 function getCharacterReply(name) {
     const cleanName = name.toLowerCase();
-
     const replies = {
         sheldon: [
-            "Bazinga! I fooled you.",
-            "That is my spot. And that is my line.",
+            "Bazinga! I fooled you.", "That is my spot. And that is my line.",
             "I'm not crazy, my mother had me tested.",
             "Please, I have a master's degree and two doctorates. Of course I said that.",
-            "In the world of minions, I am the Gru. That is my dialogue.",
             "It's a non-optional social convention that you credit me for that quote.",
             "Oh, gravity, thou art a heartless bitch. (Also, I said that)."
         ],
         leonard: [
-            "Yeah, yeah, I said it. Can we go now?",
-            "Why does everything always have to be about Sheldon?",
-            "I did say that. And I regret it immediately.",
-            "That sounds like something I'd say while Penny is ignoring me.",
-            "Sarcasm sign? No? Okay, yes, that was me.",
+            "Yeah, yeah, I said it. Can we go now?", "Why does everything always have to be about Sheldon?",
+            "I did say that. And I regret it immediately.", "Sarcasm sign? No? Okay, yes, that was me.",
             "I put up with a lot, but yes, that is my line."
         ],
         penny: [
-            "Holy crap on a cracker, I actually said that?",
-            "I need a glass of wine to deal with this.",
-            "Yeah, I said it. Don't look at me like I'm stupid.",
-            "Is that a science thing? Because I definitely said it.",
-            "Knock, knock, knock. Penny. That's me.",
+            "Holy crap on a cracker, I actually said that?", "I need a glass of wine to deal with this.",
+            "Yeah, I said it. Don't look at me like I'm stupid.", "Knock, knock, knock. Penny. That's me.",
             "Sweetie, I say a lot of things."
         ],
         howard: [
-            "I went to space! Of course I said something that cool.",
-            "That's the engineer talking. MIT, baby!",
-            "Did my mother tell you that? BECAUSE I AM AN ASTRONAUT.",
-            "That line works on all the ladies. Trust me.",
-            "I believe the term you are looking for is 'Wolowitzed'.",
+            "I went to space! Of course I said something that cool.", "That's the engineer talking. MIT, baby!",
+            "Did my mother tell you that? BECAUSE I AM AN ASTRONAUT.", "That line works on all the ladies. Trust me.",
             "Bernadette would kill me if she knew I repeated that."
         ],
         raj: [
-            "(Whispers in ear) *He says he definitely said that.*",
-            "I'm comfortable with my masculinity, and I stand by that quote.",
-            "That was beautiful. Like a Bollywood movie.",
-            "My father paid a lot of money for me to say that.",
-            "Did you know I have a dog named Cinnamon? Also, yes, I said that.",
-            "Please don't send me back to India, I am being witty!"
+            "(Whispers in ear) *He says he definitely said that.*", "I'm comfortable with my masculinity, and I stand by that quote.",
+            "My father paid a lot of money for me to say that.", "Did you know I have a dog named Cinnamon? Also, yes, I said that."
         ],
         amy: [
-            "According to my research, that is indeed my utterance.",
-            "I find your obsession with my quotes... titillating.",
-            "Sheldon, look! They are quoting me!",
-            "That is scientifically accurate and socially awkward. Definitely me.",
-            "My hippocampus retains the memory of saying exactly that."
+            "According to my research, that is indeed my utterance.", "I find your obsession with my quotes... titillating.",
+            "Sheldon, look! They are quoting me!", "My hippocampus retains the memory of saying exactly that."
         ]
     };
-
     const generic = [
-        "I believe that was my line.",
-        "Yes, I recall saying that.",
-        "That sounds exactly like me.",
-        "You have excellent hearing. That was me.",
-        "A quote attributed to me? Fascinating.",
-        "Indeed."
+        "I believe that was my line.", "Yes, I recall saying that.", "That sounds exactly like me.",
+        "You have excellent hearing. That was me.", "Indeed."
     ];
-
     const characterKey = Object.keys(replies).find(key => cleanName.includes(key));
     const pool = characterKey ? replies[characterKey] : generic;
-
     return pool[Math.floor(Math.random() * pool.length)];
 }
