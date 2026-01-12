@@ -1,46 +1,50 @@
-# Who Said What — Character Predictor
+This project is a web application that predicts which character from The Big Bang Theory is most likely to say a specific line of dialogue. It uses natural language processing and vector similarity search to analyze the input text and match it against a database of lines from the show.
 
-Simple web UI and FastAPI backend to predict which Big Bang Theory character likely said a short line or matches a small context.
+## How to Use
 
-Quick start
-1. Create and activate a Python virtualenv (recommended).
-2. Install dependencies:
+# Open the Application: Navigate to the hosted frontend URL.
 
-```bash
-pip install -r requirements.txt
-```
+# Enter Text: In the main input box, type a sentence, quote, or phrase you want to test.
 
-3. Ensure you have built the embedding index (the project includes `src/build_index.py`). If you have a prebuilt index it can be placed in `data/index/faiss`.
+# Submit: Click the "Post" button.
 
-4. Run the backend (serves API + frontend static files):
+#View Result: The application will process your text. A "reply" will appear in the feed from the character the model predicts would say that line, complete with their name and profile picture.
 
-```bash
-uvicorn src.server:app --reload --host 0.0.0.0 --port 8000
-```
+## How This Project Was Made
+This application operates as a full-stack system utilizing a retrieval-based machine learning approach.
 
-5. Open http://localhost:8000 in your browser. Type a short quote or a personality/vibe and click "Predict".
+# 1. Data Processing
 
-Notes
-- The frontend is in the `frontend/` folder. The prediction endpoint is `POST /api/predict` and expects JSON `{ "query": "...", "min_confidence": 0.25 }`.
-- Preview images for characters are served from `frontend/assets/characters` when available, otherwise the server will attempt to fetch and cache an image from fandom.
-- If you get errors about missing NLP/embedding packages, ensure `sentence-transformers` and `faiss-cpu` are installed and that `data/index/faiss/index.faiss` exists.
+# The core dataset consists of dialogue transcripts from 10 seasons of The Big Bang Theory. These scripts were cleaned and processed to associate every line of dialogue with the character who spoke it. The data pipeline handles text normalization and filtering to ensure high-quality matching.
 
-Troubleshooting
-- If you see `No documents retrieved` or low confidence, build the index with more data using `src/build_index.py` and the dataset in `data/raw`.
+# 2. Machine Learning & Natural Language Processing
 
-### Deploying to Vercel (container)
-This project can be deployed to Vercel using a Docker container. A `Dockerfile` and `vercel.json` are included.
+# Instead of a generative LLM (Large Language Model), this project uses a retrieval-augmented approach:
 
-Quick steps:
-1. Install the Vercel CLI: `npm i -g vercel` (or use the web UI).
-2. From the project root run:
+# Embeddings: The system uses Sentence Transformers to convert lines of dialogue into dense vector embeddings. This allows the computer to understand the semantic meaning of the text rather than just matching keywords.
 
-```bash
-vercel deploy --prod
-```
+# Vector Database: These embeddings are stored in a FAISS (Facebook AI Similarity Search) index, allowing for extremely fast similarity searches across thousands of lines of dialogue.
 
-Notes & caveats:
-- The model/embedding dependencies (e.g. `faiss-cpu`, `sentence-transformers`) are large and may fail to build on Vercel or exceed limits. Using Docker helps but you may hit platform resource or build-time limits.
-- If you encounter build or runtime errors for heavy ML packages, consider hosting the backend on a container-friendly host (Render, Fly, DigitalOcean, Railway) and deploying only the static frontend to Vercel.
-- When deploying, ensure your `data/index/faiss` index is available (you may need to populate it in the container or point to an external model service).
+# Prediction Logic: When a user inputs text, the system converts it into a vector and queries the FAISS index to find the most semantically similar lines from the show. It then uses Reciprocal Rank Fusion (RRF) to score the results and determine which character is statistically most likely to say that line based on the retrieved context.
 
+# 3. Backend Architecture
+
+# The backend is built with FastAPI. It exposes endpoints that:
+
+# Accept user queries.
+
+# Run the prediction logic.
+
+# Return the predicted character, confidence score, and metadata.
+
+# Manage character assets (images) by scraping or using cached local files when necessary.
+
+# 4. Frontend Architecture
+
+# The frontend is built with Vanilla JavaScript, HTML, and CSS. It does not use heavy frameworks like React or Vue, keeping it lightweight. The interface is designed to mimic a social media feed, dynamically rendering "tweets" and "replies" using the DOM API.
+
+# 5. Deployment
+
+# Backend: Packaged into a Docker container (defined in Dockerfile) and deployed to a cloud hosting platform (e.g., Hugging Face Spaces).
+
+# Frontend: Deployed as a static site (e.g., Vercel) that communicates with the backend API via HTTP requests.
