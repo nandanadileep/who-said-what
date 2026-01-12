@@ -1,13 +1,13 @@
+// --- CONFIGURATION ---
+// This points to your Python backend on Hugging Face
+const BACKEND_URL = 'https://ndileep-thebigbangtheorytweet.hf.space';
+const API_URL = `${BACKEND_URL}/api/predict`;
+
 // --- DOM ELEMENTS ---
 const composeInput = document.getElementById('compose-input');
 const postBtn = document.getElementById('post-btn');
 const feedStream = document.getElementById('feed-stream');
 const spinner = document.getElementById('spinner');
-
-// --- CONFIGURATION ---
-// Replace this with your actual Hugging Face Direct URL found in:
-// Space > Three Dots (...) > Embed this Space > Direct URL
-const API_URL = 'https://ndileep-thebigbangtheorytweet.hf.space/api/predict';
 
 // --- STATE ---
 let isProcessing = false;
@@ -78,16 +78,18 @@ if (postBtn) {
 
             // Process Character Data
             const charName = data.prediction || 'Unknown';
-            // Use local_image if available, otherwise fallback to SVG logic
             let charImg = data.local_image || data.image;
+
+            // --- IMAGE FIX ---
+            // If the backend gives us a relative path (like "/assets/remote/..."),
+            // we prepend the Hugging Face URL so the browser can find it.
+            if (charImg && charImg.startsWith('/')) {
+                charImg = BACKEND_URL + charImg;
+            }
             
-            // If the server didn't return a full URL, we might need to fix the path
-            // Note: Since frontend is on Vercel and Backend on HF, relative paths like
-            // "/assets/..." won't work for images stored on HF. 
-            // We use a fallback SVG if the image is missing or relative.
-            if (!charImg || charImg.startsWith('/')) {
-                 charImg = `assets/remote/${charName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_fallback.jpg`; 
-                 // Note: You might want to handle images differently if hosting separately
+            // If no image is found, set to empty string so the <img> onerror tag triggers
+            if (!charImg) {
+                charImg = '';
             }
 
             const replyText = getCharacterReply(charName);
@@ -115,7 +117,7 @@ if (postBtn) {
             if (loadingElement) loadingElement.remove();
 
             // Show a friendly error message
-            showError('Server error: could not identify character. ' + error.message);
+            showError('Server error: ' + error.message);
 
             // Fallback reply for demo so user sees result flow
             setTimeout(() => {
@@ -301,6 +303,7 @@ function getCharacterReply(name) {
         ],
         leonard: [
             "Yeah, yeah, I said it. Can we go now?",
+            "Why does everything always have to be about Sheldon?",
             "I did say that. And I regret it immediately.",
             "That sounds like something I'd say while Penny is ignoring me.",
             "Sarcasm sign? No? Okay, yes, that was me.",
