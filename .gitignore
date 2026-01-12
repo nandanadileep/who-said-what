@@ -1,0 +1,8 @@
+__pycache__/
+.venv/
+data/index/
+data/raw/*.csv
+data/processed/*.pkl
+*.faiss
+*.pkl
+.cache/
