@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>X - Who Said What?</title>
     <style>
         /* --- RESET & VARIABLES --- */
@@ -18,8 +18,6 @@
             --red-like: #f91880;
             --green-retweet: #00ba7c;
             --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            --glass-bg: rgba(0, 0, 0, 0.65);
-            --glass-border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -28,55 +26,26 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             font-family: var(--font-stack);
-            overflow-y: scroll;
-            height: 100vh;
+            /* Fix for mobile scroll feel */
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: visible; 
         }
 
         a { text-decoration: none; color: inherit; }
-        ul { list-style: none; }
         button { border: none; background: none; cursor: pointer; font-family: inherit; }
 
         /* --- LAYOUT GRID --- */
         .layout {
             display: grid;
-            grid-template-columns: 240px minmax(0, 1fr) 300px; /* Sidebar | Feed | Widgets */
+            grid-template-columns: 275px minmax(0, 1fr) 350px; 
             gap: 0;
-            max-width: 1250px;
+            max-width: 1300px;
             margin: 0 auto;
             min-height: 100vh;
-            padding: 12px;
         }
 
-        /* Medium screens: reduce sidebars */
-        @media (max-width: 1100px) {
-            .layout { grid-template-columns: 88px minmax(0, 1fr) 260px; }
-            .nav-label { display: none; }
-            .tweet-btn-large { display: none; }
-            .tweet-btn-icon { display: block !important; }
-        }
-
-        /* Narrow screens: hide right widgets */
-        @media (max-width: 900px) {
-            .layout { grid-template-columns: 88px 1fr; grid-auto-columns: 0; }
-            .right-sidebar { display: none; }
-        }
-
-        /* Mobile: single column feed, bottom navigation */
-        @media (max-width: 600px) {
-            .layout { grid-template-columns: 1fr; padding: 8px; }
-            .left-sidebar { 
-                position: fixed; bottom: 0; left: 0; right: 0; height: 60px; 
-                flex-direction: row; justify-content: space-around; 
-                background: var(--bg-color); border-top: 1px solid var(--border-color);
-                padding: 0; z-index: 100;
-            }
-            .logo-box { display: none; }
-            .nav-item { padding: 10px; }
-            .main-feed { border: none; margin-bottom: 70px; }
-            .right-sidebar { display: none; }
-        }
-
-        /* --- LEFT SIDEBAR --- */
+        /* --- LEFT SIDEBAR (Desktop) --- */
         .left-sidebar {
             position: sticky;
             top: 0;
@@ -85,23 +54,22 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            overflow-y: auto;
         }
 
-        .nav-links { margin-top: 10px; }
-        
         .logo-box {
             padding: 12px;
-            width: 50px;
-            height: 50px;
+            width: 50px; height: 50px;
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
             transition: 0.2s;
+            margin-bottom: 2px;
         }
         .logo-box:hover { background-color: rgba(29, 155, 240, 0.1); }
         .logo-svg { fill: var(--text-main); width: 30px; height: 30px; }
 
+        .nav-links { margin-top: 4px; width: 100%; }
+        
         .nav-item {
             display: flex;
             align-items: center;
@@ -111,6 +79,8 @@
             transition: 0.2s;
             color: var(--text-main);
             font-size: 20px;
+            text-decoration: none;
+            width: fit-content;
         }
         .nav-item:hover { background-color: var(--card-hover); }
         .nav-item.active { font-weight: 700; }
@@ -125,33 +95,36 @@
             border-radius: 30px;
             width: 90%;
             margin-top: 15px;
-            transition: 0.2s;
             box-shadow: 0 4px 10px rgba(29, 155, 240, 0.3);
+            transition: 0.2s;
         }
         .tweet-btn-large:hover { background-color: var(--accent-blue-hover); }
-        .tweet-btn-icon {
-            display: none;
-            width: 50px; height: 50px;
-            border-radius: 50%;
-            background-color: var(--accent-blue);
-            margin-top: 15px;
-            fill: white;
+
+        .profile-section {
             padding: 12px;
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.2s;
         }
+        .profile-section:hover { background-color: var(--card-hover); }
 
         /* --- MAIN FEED --- */
         .main-feed {
             border-left: 1px solid var(--border-color);
             border-right: 1px solid var(--border-color);
             position: relative;
+            padding-bottom: 200px; /* Space for scrolling past bottom */
         }
 
         .feed-header {
             position: sticky;
             top: 0;
-            background: rgba(0, 0, 0, 0.65);
+            background: rgba(0, 0, 0, 0.75);
             backdrop-filter: blur(12px);
-            z-index: 10;
+            z-index: 100;
             border-bottom: 1px solid var(--border-color);
         }
         
@@ -159,34 +132,22 @@
             padding: 12px 16px;
             font-weight: 700;
             font-size: 20px;
+            cursor: pointer;
         }
 
-        .header-tabs {
-            display: flex;
-            justify-content: space-around;
-        }
-        
+        .header-tabs { display: flex; }
         .tab-item {
-            flex: 1;
-            text-align: center;
-            padding: 16px 0;
-            font-weight: 600;
-            color: var(--text-secondary);
-            cursor: pointer;
-            position: relative;
+            flex: 1; text-align: center; padding: 16px 0;
+            font-weight: 600; color: var(--text-secondary);
+            cursor: pointer; position: relative;
             transition: 0.2s;
         }
-        .tab-item:hover { background-color: var(--card-hover); }
+        .tab-item:hover { background-color: rgba(255,255,255,0.03); }
         .tab-item.active { color: var(--text-main); }
         .tab-indicator {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60px;
-            height: 4px;
-            background-color: var(--accent-blue);
-            border-radius: 2px;
+            position: absolute; bottom: 0; left: 50%;
+            transform: translateX(-50%); width: 56px; height: 4px;
+            background-color: var(--accent-blue); border-radius: 2px;
             display: none;
         }
         .tab-item.active .tab-indicator { display: block; }
@@ -198,8 +159,7 @@
             border-bottom: 1px solid var(--border-color);
         }
         .user-avatar {
-            width: clamp(36px, 5.6vw, 56px);
-            height: clamp(36px, 5.6vw, 56px);
+            width: 40px; height: 40px;
             border-radius: 50%;
             background-color: #333;
             object-fit: cover;
@@ -208,113 +168,57 @@
         }
         .compose-right { flex: 1; }
         .compose-input {
-            width: 100%;
-            background: transparent;
-            border: none;
-            color: var(--text-main);
-            font-size: 20px;
-            outline: none;
-            resize: none;
-            min-height: 50px;
-            padding: 10px 0;
-            font-family: var(--font-stack);
+            width: 100%; background: transparent; border: none;
+            color: var(--text-main); font-size: 20px;
+            outline: none; resize: none; min-height: 50px;
+            padding: 10px 0; font-family: var(--font-stack);
         }
         .compose-input::placeholder { color: var(--text-secondary); }
         
         .compose-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 10px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            padding-top: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 10px;
         }
         .compose-icons svg {
-            width: 20px; height: 20px;
-            fill: var(--accent-blue);
-            margin-right: 12px;
-            cursor: pointer;
-            padding: 8px;
-            box-sizing: content-box;
-            border-radius: 50%;
+            width: 20px; height: 20px; fill: var(--accent-blue);
+            margin-right: 12px; cursor: pointer; padding: 8px;
+            box-sizing: content-box; border-radius: 50%;
             transition: 0.2s;
         }
         .compose-icons svg:hover { background-color: rgba(29, 155, 240, 0.1); }
 
         .post-btn {
-            background-color: var(--accent-blue);
-            color: white;
-            font-weight: 700;
-            padding: 8px 16px;
-            border-radius: 20px;
-            opacity: 0.5;
-            pointer-events: none;
-            transition: 0.2s;
+            background-color: var(--accent-blue); color: white;
+            font-weight: 700; padding: 8px 16px; border-radius: 20px;
+            opacity: 0.5; pointer-events: none; transition: 0.2s;
         }
         .post-btn.active { opacity: 1; pointer-events: auto; }
 
-        /* Feed Items */
+        /* Tweets */
         .tweet {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            gap: 12px;
-            cursor: pointer;
-            transition: 0.2s;
+            padding: 12px 16px; border-bottom: 1px solid var(--border-color);
+            display: flex; gap: 12px; cursor: pointer; transition: 0.2s;
             position: relative;
-            align-items: flex-start;
         }
         .tweet:hover { background-color: rgba(255, 255, 255, 0.02); }
-        
-        /* Thread / Reply Connector Line */
         .thread-line {
-            position: absolute;
-            left: 36px; /* center of 40px avatar + 16px pad */
-            top: 52px;
-            bottom: -12px;
-            width: 2px;
-            background-color: var(--border-color);
-            z-index: 0;
+            position: absolute; left: 36px; top: 52px; bottom: -12px;
+            width: 2px; background-color: var(--border-color); z-index: 0;
         }
-        .tweet.reply { border-top: none; }
-
         .tweet-content { flex: 1; margin-left: 0; z-index: 1; }
-        .tweet-header {
-            display: flex;
-            align-items: baseline;
-            margin-bottom: 4px;
-        }
-        .user-name { font-weight: 700; color: var(--text-main); margin-right: 5px; }
+        .tweet-header { display: flex; align-items: baseline; margin-bottom: 4px; flex-wrap: wrap;}
+        .user-name { font-weight: 700; margin-right: 5px; color: var(--text-main); }
         .user-handle { color: var(--text-secondary); margin-right: 5px; }
         .time { color: var(--text-secondary); }
-        .tweet-text {
-            font-size: 15px;
-            line-height: 1.5;
-            color: var(--text-main);
-            margin-bottom: 12px;
-            white-space: pre-wrap;
-        }
+        .tweet-text { font-size: 15px; line-height: 1.5; margin-bottom: 12px; white-space: pre-wrap; }
         
         .tweet-actions {
-            display: flex;
-            justify-content: space-between;
-            max-width: 425px;
-            color: var(--text-secondary);
+            display: flex; justify-content: space-between; max-width: 425px; color: var(--text-secondary);
         }
-        .action-item {
-            display: flex;
-            align-items: center;
-            font-size: 13px;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
+        .action-item { display: flex; align-items: center; font-size: 13px; cursor: pointer; transition: color 0.2s; }
         .action-icon {
-            width: 18px; height: 18px;
-            fill: currentColor;
-            margin-right: 8px;
-            padding: 6px;
-            box-sizing: content-box;
-            border-radius: 50%;
+            width: 18px; height: 18px; fill: currentColor; margin-right: 8px;
+            padding: 6px; box-sizing: content-box; border-radius: 50%;
             transition: background 0.2s;
         }
         .action-item:hover.blue { color: var(--accent-blue); }
@@ -323,113 +227,146 @@
         .action-item:hover.green .action-icon { background: rgba(0, 186, 124, 0.1); }
         .action-item:hover.red { color: var(--red-like); }
         .action-item:hover.red .action-icon { background: rgba(249, 24, 128, 0.1); }
-
         .liked { color: var(--red-like) !important; }
         .liked svg { fill: var(--red-like); }
 
         /* --- RIGHT SIDEBAR --- */
-        .right-sidebar {
-            padding: 12px 24px;
-            position: sticky;
-            top: 0;
-            height: 100vh;
-        }
+        .right-sidebar { padding: 12px 24px; position: sticky; top: 0; height: 100vh; }
         
         .search-box {
-            background-color: #202327;
-            border-radius: 25px;
-            padding: 10px 20px;
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
+            background-color: #202327; border-radius: 25px; padding: 10px 20px;
+            display: flex; align-items: center; margin-bottom: 20px;
             border: 1px solid transparent;
         }
-        .search-box:focus-within {
-            background-color: black;
-            border-color: var(--accent-blue);
-        }
+        .search-box:focus-within { background-color: black; border-color: var(--accent-blue); }
         .search-icon { width: 18px; height: 18px; fill: var(--text-secondary); margin-right: 12px; }
-        .search-input {
-            background: transparent;
-            border: none;
-            color: var(--text-main);
-            outline: none;
-            width: 100%;
-        }
+        .search-input { background: transparent; border: none; color: var(--text-main); outline: none; width: 100%; }
 
-        .widget {
-            background-color: #16181c;
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 16px;
-        }
+        .widget { background-color: #16181c; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
         .widget-header { font-size: 20px; font-weight: 800; margin-bottom: 12px; }
-        .trend-item {
-            padding: 8px 0;
-            cursor: pointer;
-        }
+        .trend-item { padding: 8px 0; cursor: pointer; }
         .trend-meta { font-size: 13px; color: var(--text-secondary); }
         .trend-name { font-weight: 700; margin: 2px 0; }
         
-        .follow-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .follow-avatar { width: clamp(32px,4.6vw,48px); height: clamp(32px,4.6vw,48px); border-radius: 50%; margin-right: 10px; object-fit: cover; }
+        .follow-item { display: flex; align-items: center; margin-bottom: 12px; }
+        .follow-avatar { width: 40px; height: 40px; border-radius: 50%; margin-right: 10px; object-fit: cover; }
         .follow-info { flex: 1; }
         .follow-btn {
-            background-color: var(--text-main);
-            color: black;
-            font-weight: 600;
-            padding: 6px 16px;
-            border-radius: 18px;
-            font-size: 14px;
+            background-color: var(--text-main); color: black; font-weight: 600;
+            padding: 6px 16px; border-radius: 18px; font-size: 14px;
         }
-        .follow-btn:hover { opacity: 0.9; }
 
-        /* --- LOADING SPINNER --- */
+        /* --- ANIMATIONS --- */
         .spinner {
-            border: 3px solid rgba(29, 155, 240, 0.3);
-            border-radius: 50%;
-            border-top: 3px solid var(--accent-blue);
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            display: none;
+            border: 3px solid rgba(29, 155, 240, 0.3); border-radius: 50%;
+            border-top: 3px solid var(--accent-blue); width: 20px; height: 20px;
+            animation: spin 1s linear infinite; display: none;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        /* --- TYPING INDICATOR --- */
-        .typing-container {
-            display: flex;
-            align-items: center;
-            padding: 10px 0;
-        }
 
+        .typing-container { display: flex; align-items: center; padding: 10px 0; }
         .typing-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--text-secondary);
-            border-radius: 50%;
-            margin: 0 3px;
+            width: 8px; height: 8px; background-color: var(--text-secondary);
+            border-radius: 50%; margin: 0 3px;
             animation: bounce 1.4s infinite ease-in-out both;
         }
-
         .typing-dot:nth-child(1) { animation-delay: -0.32s; }
         .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
+        .tweet.loading-state { border-bottom: none; opacity: 0.8; }
 
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
-            40% { transform: scale(1); opacity: 1; }
+
+        /* =========================================
+           RESPONSIVE MEDIA QUERIES (Mobile Fixes)
+           ========================================= */
+        
+        /* Tablet (1100px) */
+        @media (max-width: 1100px) {
+            .layout { grid-template-columns: 88px minmax(0, 1fr) 290px; }
+            .nav-label { display: none; }
+            .tweet-btn-large { display: none; }
+            .nav-item { width: auto; justify-content: center; }
+            .nav-icon { margin-right: 0; }
+            .logo-box { width: 100%; justify-content: center; }
+            .profile-section { width: auto; justify-content: center; }
+            .profile-section div:nth-child(2), .profile-section div:nth-child(3) { display: none; } /* Hide names */
         }
 
-        /* Specific style for the loading tweet to look 'ghostly' */
-        .tweet.loading-state {
-            border-bottom: none;
-            opacity: 0.8;
+        /* Small Desktop / Tablet (980px) */
+        @media (max-width: 980px) {
+            .layout { grid-template-columns: 88px 1fr; }
+            .right-sidebar { display: none; }
         }
 
+        /* Mobile (600px) */
+        @media (max-width: 600px) {
+            /* 1. Layout Reset */
+            .layout { display: block; }
+            
+            /* 2. Transform Sidebar to Bottom Nav */
+            .left-sidebar {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                top: auto; /* Unset top */
+                height: 55px; /* Standard mobile nav height */
+                width: 100%;
+                background: black;
+                border-top: 1px solid var(--border-color);
+                z-index: 1000;
+                flex-direction: row;
+                padding: 0;
+                margin: 0;
+            }
+
+            /* 3. Correct the container inside Sidebar */
+            .left-sidebar > div:first-child {
+                width: 100%;
+                display: flex;
+                flex-direction: row;
+                justify-content: space-around;
+                align-items: center;
+            }
+
+            /* 4. Ensure Nav Links flow horizontally */
+            .nav-links {
+                display: flex;
+                flex-direction: row;
+                justify-content: space-around;
+                width: 100%;
+                margin: 0;
+                height: 100%;
+                align-items: center;
+            }
+
+            /* 5. Hide Elements not needed on mobile nav */
+            .logo-box, 
+            .tweet-btn-large, 
+            .profile-section {
+                display: none !important;
+            }
+
+            /* 6. Adjust Nav Items */
+            .nav-item {
+                margin: 0;
+                padding: 10px;
+                border-radius: 50%;
+            }
+            .nav-icon { width: 24px; height: 24px; margin: 0; }
+
+            /* 7. Main Feed Scroll Fix */
+            .main-feed {
+                margin-bottom: 60px; /* Push content up so it's not hidden by bar */
+                border: none;
+                width: 100%;
+            }
+
+            /* 8. Fix Header */
+            .logo-box-mobile {
+                display: block; /* If you want a logo at top, handled in HTML structure usually */
+            }
+        }
     </style>
 </head>
 <body>
@@ -455,28 +392,21 @@
                     <span class="nav-label">Notifications</span>
                 </a>
                 <a href="#" class="nav-item">
-                    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12.001 2.25a.75.75 0 0 1 .75.75v1.27a8.955 8.955 0 0 1 7.429 7.43l1.269.001a.75.75 0 0 1 0 1.5l-1.27.001a8.953 8.953 0 0 1-6.678 6.678v2.62a.75.75 0 0 1-1.5 0v-2.62a8.953 8.953 0 0 1-6.679-6.678l-1.269-.001a.75.75 0 0 1 0-1.5l1.27-.001a8.955 8.955 0 0 1 7.429-7.43V3a.75.75 0 0 1 .75-.75Z"></path></svg>
-                    <span class="nav-label">Grok</span>
-                </a>
-                <a href="#" class="nav-item">
                     <svg viewBox="0 0 24 24" class="nav-icon"><path d="M5.651 19h12.698c-.337-1.8-1.023-3.21-1.945-4.19C15.318 13.65 13.838 13 12 13s-3.317.65-4.404 1.81c-.922.98-1.608 2.39-1.945 4.19zm14.225.483a.75.75 0 0 1-.75.75H4.874a.75.75 0 0 1-.745-.82c.456-2.9 1.636-5.11 3.29-6.87C9.28 10.566 11.535 9.5 12 9.5s2.72.66 4.58 3.04c1.654 1.76 2.833 3.97 3.29 6.87a.75.75 0 0 1-.744.82zM12 8a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"></path></svg>
                     <span class="nav-label">Profile</span>
                 </a>
             </nav>
 
             <button class="tweet-btn-large">Post</button>
-            <div class="tweet-btn-icon">
-                <svg viewBox="0 0 24 24"><path d="M23 3c-6.62-.1-10.38 2.421-13.05 6.03C7.29 12.61 6 17.331 6 22h2c0-1.007.07-2.012.19-3H12c4.1 0 7.48-3.082 7.94-7.054C22.79 10.147 23.17 6.359 23 3zm-7 8h-1.5v2H16c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4v1h2v-1c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2z"></path></svg>
-            </div>
         </div>
         
-        <div style="padding: 12px; display: flex; align-items: center; margin-bottom: 20px; cursor: pointer;">
+        <div class="profile-section">
             <img src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" class="user-avatar" alt="Me">
-            <div style="flex: 1; display: none; @media(min-width: 1024px){ display: block; }">
+            <div>
                 <div style="font-weight: 700;">User</div>
                 <div style="color: var(--text-secondary);">@user</div>
             </div>
-            <div style="display: none; @media(min-width: 1024px){ display: block; }">...</div>
+            <div style="margin-left: auto;">...</div>
         </div>
     </header>
 
@@ -484,10 +414,7 @@
         <div class="feed-header">
             <div class="header-top">Home</div>
             <div class="header-tabs">
-                <div class="tab-item active">
-                    For you
-                    <div class="tab-indicator"></div>
-                </div>
+                <div class="tab-item active">For you<div class="tab-indicator"></div></div>
                 <div class="tab-item">Following</div>
             </div>
         </div>
