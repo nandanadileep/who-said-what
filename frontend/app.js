@@ -1,125 +1,34 @@
-const btn = document.getElementById('predict');
-const genBtn = document.getElementById('generate');
-const clearBtn = document.getElementById('clear');
-const queryEl = document.getElementById('query');
-const avatar = document.getElementById('avatar');
-const nameEl = document.getElementById('name');
-const confEl = document.getElementById('confidence');
-const scoresEl = document.getElementById('scores');
+// --- DOM ELEMENTS ---
+const composeInput = document.getElementById('compose-input');
+const postBtn = document.getElementById('post-btn');
+const feedStream = document.getElementById('feed-stream');
+const spinner = document.getElementById('spinner');
 
-// Defensive UI fixes: remove accidental HTML dumped into the textarea
-document.addEventListener('DOMContentLoaded', () => {
-  try {
-    if (queryEl && queryEl.value && queryEl.value.includes('<button')) {
-      // Clear accidental paste of HTML controls
-      queryEl.value = '';
-    }
+// --- CONFIGURATION ---
+// Replace this with your actual Hugging Face Direct URL found in:
+// Space > Three Dots (...) > Embed this Space > Direct URL
+const API_URL = 'https://ndileep-thebigbangtheorytweet.hf.space/api/predict';
 
-    // Ensure .controls isn't accidentally nested inside the textarea
-    const controls = document.querySelector('.controls');
-    const panel = document.querySelector('.panel');
-    if (controls && panel && controls.parentElement && controls.parentElement.tagName.toLowerCase() === 'textarea') {
-      panel.appendChild(controls);
-    }
-  } catch (e) {
-    // non-fatal
-    console.warn('UI init cleanup error', e);
-  }
-});
+// --- STATE ---
+let isProcessing = false;
 
-const mapToAsset = (char) => {
-  if (!char) return 'assets/unknown.svg';
-  const file = char.toLowerCase().replace(/[^a-z0-9]+/g, '_') + '.svg';
-  return 'assets/' + file;
-}
-
-async function predict(){
-  const q = queryEl.value.trim();
-  if(!q) return;
-
-  nameEl.textContent = 'Thinking...';
-  confEl.textContent = '';
-  scoresEl.textContent = '';
-
-  try{
-    let res = null;
-    try{
-      res = await fetch('/api/predict', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({query: q, min_confidence: 0.2})
+// --- AUTO RESIZE TEXTAREA ---
+if (composeInput) {
+    composeInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+        
+        // Enable/Disable Button
+        if (this.value.trim().length > 0) {
+            postBtn.classList.add('active');
+        } else {
+            postBtn.classList.remove('active');
+        }
     });
-    }catch(e){
-      // network error calling primary endpoint, fall back to demo
-      try{
-        res = await fetch('/api/predict_demo', {
-          method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({query: q, min_confidence: 0.2})
-        });
-      }catch(e2){
-        nameEl.textContent = 'Network Error';
-        avatar.src = 'assets/unknown.svg';
-        scoresEl.textContent = e.toString();
-        return;
-      }
-    }
-
-    if(!res.ok){
-      const err = await res.json().catch(()=>({status:res.status}));
-      nameEl.textContent = 'Error';
-      scoresEl.textContent = JSON.stringify(err);
-      avatar.src = 'assets/unknown.svg';
-      return;
-    }
-
-    const data = await res.json();
-    const char = data.prediction || null;
-    const conf = data.confidence ?? 0;
-    const scores = data.all_scores || {};
-
-    // Prefer cached local image, then server-provided external image, then fallback SVG
-    if (data.local_image) {
-      avatar.src = data.local_image;
-    } else if (data.image) {
-      avatar.src = data.image;
-    } else {
-      avatar.src = mapToAsset(char);
-    }
-
-    nameEl.textContent = char || 'Unknown';
-    // Do not display confidence in the UI tweet card per request.
-    confEl.textContent = '';
-    scoresEl.textContent = Object.entries(scores).map(([k,v])=>`${k}: ${v}`).join('\n');
-
-  }catch(e){
-    nameEl.textContent = 'Network Error';
-    avatar.src = 'assets/unknown.svg';
-    scoresEl.textContent = e.toString();
-  }
-  // return the last response shown to UI for chaining
-  return {prediction: nameEl.textContent === 'Unknown' ? null : nameEl.textContent, confidence: confEl.textContent};
 }
 
-btn.addEventListener('click', predict);
-genBtn.addEventListener('click', async ()=>{
-  // If we don't have a current predicted character, run predict first
-  if(!nameEl.textContent || nameEl.textContent === '—' || nameEl.textContent === 'Thinking...'){
-    await predict();
-  }
-
-  // Use the current displayed name to map to an asset
-  const char = (nameEl.textContent && nameEl.textContent !== 'Unknown' && nameEl.textContent !== '—') ? nameEl.textContent : null;
-  avatar.src = mapToAsset(char);
-
-  // small visual feedback
-  avatar.style.transition = 'transform 160ms ease';
-  avatar.style.transform = 'scale(0.96)';
-  setTimeout(()=> avatar.style.transform = 'scale(1)', 160);
-});
-clearBtn.addEventListener('click', ()=>{queryEl.value=''; nameEl.textContent='—'; confEl.textContent=''; scoresEl.textContent=''; avatar.src='assets/unknown.svg'})
-
-// Submit on Ctrl+Enter
-queryEl.addEventListener('keydown', (e)=>{if((e.ctrlKey||e.metaKey) && e.key==='Enter'){predict()}})
-// --- UPDATED POST ACTION ---
+// --- POST ACTION ---
+if (postBtn) {
     postBtn.addEventListener('click', async () => {
         if (isProcessing) return;
         const text = composeInput.value.trim();
@@ -133,7 +42,15 @@ queryEl.addEventListener('keydown', (e)=>{if((e.ctrlKey||e.metaKey) && e.key==='
 
         // 2. Render User's Post Immediately
         const userTweetId = Date.now();
-        renderTweet(text, 'User', '@user', 'Just now', 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png', false, userTweetId);
+        renderTweet(
+            text, 
+            'User', 
+            '@user', 
+            'Just now', 
+            'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png', 
+            false, 
+            userTweetId
+        );
 
         // Clear Input
         composeInput.value = '';
@@ -142,71 +59,234 @@ queryEl.addEventListener('keydown', (e)=>{if((e.ctrlKey||e.metaKey) && e.key==='
         // 3. SHOW TYPING INDICATOR IN FEED
         const loadingElement = showTypingIndicator();
 
-        // 4. Call Backend API (Simulated)
+        // 4. Call Backend API
         try {
-            const response = await fetch('/api/predict', {
+            const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query: text, min_confidence: 0.2 })
             });
 
-            if (!response.ok) throw new Error('API Error');
-            const data = await response.json();
+            // Attempt to surface server messages if present
+            const textResp = await response.text().catch(() => null);
+            if (!response.ok) {
+                const errMsg = textResp || response.statusText || 'API Error';
+                throw new Error(errMsg);
+            }
+
+            const data = textResp ? JSON.parse(textResp) : {};
 
             // Process Character Data
             const charName = data.prediction || 'Unknown';
+            // Use local_image if available, otherwise fallback to SVG logic
             let charImg = data.local_image || data.image;
-            if (!charImg) charImg = `assets/${charName.toLowerCase().replace(/[^a-z0-9]/g, '_')}.svg`; 
+            
+            // If the server didn't return a full URL, we might need to fix the path
+            // Note: Since frontend is on Vercel and Backend on HF, relative paths like
+            // "/assets/..." won't work for images stored on HF. 
+            // We use a fallback SVG if the image is missing or relative.
+            if (!charImg || charImg.startsWith('/')) {
+                 charImg = `assets/remote/${charName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_fallback.jpg`; 
+                 // Note: You might want to handle images differently if hosting separately
+            }
 
             const replyText = getCharacterReply(charName);
             
             // Artificial delay to let the user see the "typing" animation
             setTimeout(() => {
-                // REMOVE TYPING INDICATOR
-                if(loadingElement) loadingElement.remove();
+                if (loadingElement) loadingElement.remove();
 
-                // Add Real Reply
-                renderTweet(replyText, charName, `@${charName.replace(' ', '_').toLowerCase()}`, '1s', charImg, true, null, userTweetId);
+                renderTweet(
+                    replyText, 
+                    charName, 
+                    `@${charName.replace(' ', '_').toLowerCase()}`, 
+                    '1s', 
+                    charImg, 
+                    true, 
+                    null, 
+                    userTweetId
+                );
                 finishPost();
-            }, 1500); // Increased delay slightly for effect
+            }, 1500);
 
         } catch (error) {
-            console.error(error);
-            // Fallback for demo
+            console.error('Predict API error:', error);
+            // Remove typing indicator immediately
+            if (loadingElement) loadingElement.remove();
+
+            // Show a friendly error message
+            showError('Server error: could not identify character. ' + error.message);
+
+            // Fallback reply for demo so user sees result flow
             setTimeout(() => {
-                if(loadingElement) loadingElement.remove(); // Remove indicator
-                renderTweet("I couldn't reach the server, but that sounded like Sheldon.", "System", "@server_bot", "1s", "", true, null, userTweetId);
+                renderTweet(
+                    "I couldn't reach the server, but that sounded like Sheldon.", 
+                    "System", 
+                    "@server_bot", 
+                    "1s", 
+                    "", 
+                    true, 
+                    null, 
+                    userTweetId
+                );
                 finishPost();
-            }, 1000);
+            }, 800);
         }
     });
+}
 
-    // --- NEW FUNCTION: RENDER TYPING INDICATOR ---
-    function showTypingIndicator() {
-        const article = document.createElement('article');
-        article.className = 'tweet loading-state';
-        
-        // We use a generic "system" avatar or transparent one for the loading state
-        article.innerHTML = `
-            <div class="user-avatar" style="background: transparent;"></div>
-            <div class="tweet-content">
-                <div class="tweet-header">
-                    <span class="user-name" style="color: var(--text-secondary);">Identifying character</span>
-                </div>
-                <div class="typing-container">
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                </div>
+function finishPost() {
+    isProcessing = false;
+    spinner.style.display = 'none';
+    composeInput.disabled = false;
+    composeInput.focus();
+}
+
+// --- RENDER TYPING INDICATOR ---
+function showTypingIndicator() {
+    const article = document.createElement('article');
+    article.className = 'tweet loading-state';
+    
+    article.innerHTML = `
+        <div class="user-avatar" style="background: transparent;"></div>
+        <div class="tweet-content">
+            <div class="tweet-header">
+                <span class="user-name" style="color: var(--text-secondary);">Identifying character</span>
             </div>
-        `;
-        
-        // Insert at the top of the feed (before the user's post moves down, or right after it)
+            <div class="typing-container">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        </div>
+    `;
+    
+    feedStream.insertBefore(article, feedStream.firstChild);
+    return article; 
+}
+
+// --- RENDER TWEET FUNCTION ---
+function renderTweet(text, name, handle, time, avatarUrl, isReply, id, replyToId) {
+    const article = document.createElement('article');
+    article.className = 'tweet';
+    if (isReply) article.classList.add('reply');
+    
+    const safeAvatar = avatarUrl || 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
+
+    const html = `
+        ${!isReply && id ? `<div class="thread-line" id="line-${id}"></div>` : ''}
+        <img src="${safeAvatar}" class="user-avatar" onerror="this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'">
+        <div class="tweet-content">
+            <div class="tweet-header">
+                <span class="user-name">${name}</span>
+                <span class="user-handle">${handle}</span>
+                <span class="time">· ${time}</span>
+            </div>
+            <div class="tweet-text">${text}</div>
+            <div class="tweet-actions">
+                <div class="action-item blue"><svg class="action-icon" viewBox="0 0 24 24"><path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path></svg> 0</div>
+                <div class="action-item green"><svg class="action-icon" viewBox="0 0 24 24"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></svg> 0</div>
+                <div class="action-item red" onclick="toggleLike(this)"><svg class="action-icon" viewBox="0 0 24 24"><path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.605 3.01.894 1.81.844 4.17-.518 6.67z"></path></svg> <span class="like-count">0</span></div>
+                <div class="action-item"><svg class="action-icon" viewBox="0 0 24 24"><path d="M8.75 21V3h2v18h-2zM18 21V8.5h2V21h-2zM4 21l.004-10h2L6 21H4zm9.248 0v-7h2v7h-2z"></path></svg> 0</div>
+            </div>
+        </div>
+    `;
+    article.innerHTML = html;
+
+    if (replyToId) {
         feedStream.insertBefore(article, feedStream.firstChild);
-        return article; // Return element so we can remove it later
+    } else {
+        feedStream.insertBefore(article, feedStream.firstChild);
     }
+}
+
+// --- LIKE TOGGLE (Global Scope for HTML onclick) ---
+window.toggleLike = function(el) {
+    el.classList.toggle('liked');
+
+    let countSpan = el.querySelector('.like-count');
+    if (!countSpan) {
+        const textNode = Array.from(el.childNodes).find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
+        const txt = textNode ? textNode.textContent.trim() : '0';
+        if (textNode) textNode.remove();
+        countSpan = document.createElement('span');
+        countSpan.className = 'like-count';
+        countSpan.innerText = txt;
+        el.appendChild(countSpan);
+    }
+
+    const raw = (countSpan.innerText || '').trim();
+    let count = parseAbbreviatedNumber(raw);
+    if (isNaN(count)) count = 0;
+
+    if (el.classList.contains('liked')) {
+        count++;
+    } else {
+        count = Math.max(0, count - 1);
+    }
+
+    countSpan.innerText = formatAbbreviatedNumber(count);
+}
+
+function parseAbbreviatedNumber(str) {
+    if (!str) return 0;
+    const s = str.replace(/[, ]+/g, '').toUpperCase();
+    const m = s.match(/^([0-9]*\.?[0-9]+)([KMB])?$/);
+    if (!m) return parseInt(s) || 0;
+    const val = parseFloat(m[1]);
+    const suffix = m[2];
+    if (!suffix) return Math.round(val);
+    if (suffix === 'K') return Math.round(val * 1000);
+    if (suffix === 'M') return Math.round(val * 1000000);
+    if (suffix === 'B') return Math.round(val * 1000000000);
+    return Math.round(val);
+}
+
+function formatAbbreviatedNumber(n) {
+    if (n >= 1000000) {
+        const v = (n / 1000000);
+        return (Math.round(v * 10) / 10).toString().replace(/\.0$/, '') + 'M';
+    }
+    if (n >= 1000) {
+        const v = (n / 1000);
+        return (Math.round(v * 10) / 10).toString().replace(/\.0$/, '') + 'K';
+    }
+    return String(n);
+}
+
+// --- ERROR DISPLAY ---
+function showError(message) {
+    try {
+        const existing = document.getElementById('api-error-widget');
+        if (existing) existing.remove();
+
+        const box = document.createElement('div');
+        box.id = 'api-error-widget';
+        box.className = 'widget';
+        box.style.border = '1px solid rgba(255,80,80,0.12)';
+        box.style.background = '#2a1b1b';
+        box.style.color = '#ffdcdc';
+        box.style.marginBottom = '12px';
+        box.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <div style="font-weight:800;">Connection Error</div>
+                <button style="background:transparent;color:var(--text-secondary);border-radius:6px;padding:6px;cursor:pointer;" aria-label="close">✕</button>
+            </div>
+            <div style="color:var(--text-secondary);font-size:14px;">${message}</div>
+        `;
+
+        const closeBtn = box.querySelector('button');
+        closeBtn.addEventListener('click', () => box.remove());
+
+        feedStream.insertBefore(box, feedStream.firstChild);
+    } catch (e) {
+        console.error('Failed to show error widget', e);
+        alert(message);
+    }
+}
+
+// --- CHARACTER REPLIES ---
 function getCharacterReply(name) {
-    // Normalize name to lowercase for easier matching
     const cleanName = name.toLowerCase();
 
     const replies = {
@@ -221,7 +301,6 @@ function getCharacterReply(name) {
         ],
         leonard: [
             "Yeah, yeah, I said it. Can we go now?",
-            "Why does everything always have to be about Sheldon?",
             "I did say that. And I regret it immediately.",
             "That sounds like something I'd say while Penny is ignoring me.",
             "Sarcasm sign? No? Okay, yes, that was me.",
@@ -260,7 +339,6 @@ function getCharacterReply(name) {
         ]
     };
 
-    // Generic fallback for unknown characters
     const generic = [
         "I believe that was my line.",
         "Yes, I recall saying that.",
@@ -270,13 +348,8 @@ function getCharacterReply(name) {
         "Indeed."
     ];
 
-    // 1. Check if we have specific lines for this character
-    // We search the keys (e.g., if API returns "Sheldon Cooper", we match "sheldon")
     const characterKey = Object.keys(replies).find(key => cleanName.includes(key));
-
-    // 2. Select the array (specific or generic)
     const pool = characterKey ? replies[characterKey] : generic;
 
-    // 3. Return a random item from the selected pool
     return pool[Math.floor(Math.random() * pool.length)];
 }
